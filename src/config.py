@@ -44,31 +44,12 @@ class BlobMap:
 
 
 class Settings:
-    DEFAULTS = {
-        "game_filter": "tcp+udp",
-        "ipset_mode": "loaded",
-        "auto_update_check": True,
-        "dns_over_https": True,
-        "language": "ru",
-        "wf_parts": [
-            "windivert_part.discord_media.txt",
-            "windivert_part.stun.txt",
-            "windivert_part.wireguard.txt",
-            "windivert_part.quic_initial_ietf.txt",
-        ],
-        "wf_tcp": "80,443,2053,2083,2087,2096,8443",
-        "wf_udp": "443,19294-19344,50000-50100",
-        "game_filter_tcp": "1024-65535",
-        "game_filter_udp": "1024-65535",
-    }
-
     def __init__(self):
         self._path = CONFIG_DIR / "settings.yaml"
-        self._data = dict(self.DEFAULTS)
-        if self._path.exists():
-            loaded = load_yaml(self._path)
-            if loaded:
-                self._data.update(loaded)
+        self._data = {}
+        loaded = load_yaml(self._path) if self._path.exists() else {}
+        if loaded:
+            self._data.update(loaded)
 
     def get(self, key, default=None):
         return self._data.get(key, default)
