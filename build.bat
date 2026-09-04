@@ -46,6 +46,12 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+echo Ochistka...
+rmdir /s /q "%PKG%"
+del /q "dist\%NAME%.exe"
+del /q "%NAME%.spec"
+if exist build rmdir /s /q build
+
 echo.
 echo ============================================
 echo  Gotovo: dist\%NAME%.zip
