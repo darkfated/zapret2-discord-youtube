@@ -21,7 +21,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [1/2] Sborka exe...
-pyinstaller --noconfirm --onefile --console --uac-admin --name "%NAME%" --collect-all customtkinter --clean run.py
+pyinstaller --noconfirm --onefile --windowed --uac-admin --name "%NAME%" --collect-all customtkinter --clean run.py
 if %errorlevel% neq 0 (
     echo [ERROR] Build failed.
     pause
