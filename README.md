@@ -1,20 +1,27 @@
+<p align="center">
+  <img width="360" height="240" alt="banner" src="https://github.com/user-attachments/assets/da779eed-cdd8-4c96-9973-0ce659fd4790" />
+</p>
+
 # zapret2-discord-youtube
 
-Обход DPI для Discord, YouTube, игр, и другого. Выбрал режим - нажал **Старт**. Работает на движке zapret2 (winws2).
+Обход DPI для Discord, YouTube, игр, и другого. Работает на современном движке zapret2 (winws2).
 
 ## Запуск
 
 **Для пользователей** - скачайте последнюю версию из [Релизов](https://github.com/darkfated/zapret2-discord-youtube/releases/latest), распакуйте zip и запустите `zapret2-discord-youtube.exe`.
 
-**Для разработчиков** - изменяйте содержимое и запускайте `build.bat`. В `dist/` появится готовое решение - папка `zapret2-discord-youtube/`.
+**Для разработчиков** - редактируйте содержимое и запускайте `build.bat`. В `dist/` появится папка `zapret2-discord-youtube/`.
 
 ## Использование
 
 1. Выберите режим в списке слева (начните с **Изумруд 1** - базовый).
 2. Нажмите **Старт**.
-3. Не работает - перебирайте режимы. Жёлтые - агрессивные ("Уголь", "Метеорит"), могут задеть другой трафик.
+3. Не работает - перебирайте режимы. Жёлтые - агрессивные (Уголь, Метеорит) могут задеть другой трафик.
 
-Обход уже включен - клик по другому режиму сразу переключит его, для удобства.
+<img width="786" height="582" alt="{52E3D908-046E-4AFD-B6B6-784037B4C98C}" src="https://github.com/user-attachments/assets/1deed083-ecde-464f-9de0-1a650fd26b0a" />
+
+> [!NOTE]
+> Обход уже включен - клик по другому режиму сразу переключит его, для удобства.
 
 ## Режимы
 
@@ -46,15 +53,21 @@
 ## Структура
 
 ```
-├── run.py            # вход
-├── build.bat         # сборка
-├── src/              # приложение
-├── config/           # настройки
-├── lists/            # домены/IP
-├── blobs/            # образцы пакетов
-└── zapret2/          # движок
+├── run.py     # вход
+├── build.bat  # сборка
+├── src/       # приложение
+├── config/    # настройки
+├── lists/     # домены/IP
+├── blobs/     # образцы пакетов
+└── zapret2/   # движок
 ```
 
 ## Зависимости
 
-[zapret](https://github.com/bol-van/zapret) (движок, благодарность автору), WinDivert, Python.
+[zapret](https://github.com/bol-van/zapret) (движок, благодарность автору), WinDivert.
+
+## Лицензия
+
+This project is under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
+Copyright (C) 2026 darkfated.
