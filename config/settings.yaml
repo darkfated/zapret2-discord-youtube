@@ -1,8 +1,4 @@
 game_filter: tcp+udp
-ipset_mode: loaded
-auto_update_check: true
-dns_over_https: true
-language: ru
 wf_parts:
   - windivert_part.discord_media.txt
   - windivert_part.stun.txt
