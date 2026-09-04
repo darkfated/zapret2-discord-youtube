@@ -30,16 +30,17 @@ if %errorlevel% neq 0 (
 
 echo [2/2] Podgotovka paketa...
 set PKG=dist\release
+set APP=%PKG%\%NAME%
 if exist "%PKG%" rmdir /s /q "%PKG%"
-mkdir "%PKG%"
+mkdir "%APP%"
 
-copy /Y "dist\%NAME%.exe" "%PKG%\" >nul
-xcopy /e /i /y config "%PKG%\config" >nul
-xcopy /e /i /y lists  "%PKG%\lists"  >nul
-xcopy /e /i /y blobs  "%PKG%\blobs"  >nul
-xcopy /e /i /y zapret2 "%PKG%\zapret2" >nul
+copy /Y "dist\%NAME%.exe" "%APP%\" >nul
+xcopy /e /i /y config "%APP%\config" >nul
+xcopy /e /i /y lists  "%APP%\lists"  >nul
+xcopy /e /i /y blobs  "%APP%\blobs"  >nul
+xcopy /e /i /y zapret2 "%APP%\zapret2" >nul
 
-powershell -NoProfile -Command "Compress-Archive -Path '%PKG%\*' -DestinationPath 'dist\%NAME%.zip' -Force"
+powershell -NoProfile -Command "Compress-Archive -Path '%PKG%\%NAME%' -DestinationPath 'dist\%NAME%.zip' -Force"
 if %errorlevel% neq 0 (
     echo [ERROR] Zip failed.
     pause
