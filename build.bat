@@ -21,17 +21,17 @@ if %errorlevel% neq 0 (
 )
 
 echo [1/2] Sborka exe...
-pyinstaller --noconfirm --onefile --console --uac-admin --name "%NAME%" --clean run.py
+pyinstaller --noconfirm --onefile --console --uac-admin --name "%NAME%" --collect-all customtkinter --clean run.py
 if %errorlevel% neq 0 (
     echo [ERROR] Build failed.
     pause
     exit /b 1
 )
 
-echo [2/2] Podgotovka paketa...
-set PKG=dist\release
+echo [2/2] Podgotovka papki...
+set PKG=dist
 set APP=%PKG%\%NAME%
-if exist "%PKG%" rmdir /s /q "%PKG%"
+if exist "%APP%" rmdir /s /q "%APP%"
 mkdir "%APP%"
 
 copy /Y "dist\%NAME%.exe" "%APP%\" >nul
@@ -40,21 +40,15 @@ xcopy /e /i /y lists  "%APP%\lists"  >nul
 xcopy /e /i /y blobs  "%APP%\blobs"  >nul
 xcopy /e /i /y zapret2 "%APP%\zapret2" >nul
 
-powershell -NoProfile -Command "Compress-Archive -Path '%PKG%\%NAME%' -DestinationPath 'dist\%NAME%.zip' -Force"
-if %errorlevel% neq 0 (
-    echo [ERROR] Zip failed.
-    pause
-    exit /b 1
-)
-
 echo Ochistka...
-rmdir /s /q "%PKG%"
 del /q "dist\%NAME%.exe"
+del /q "dist\%NAME%.zip"
 del /q "%NAME%.spec"
 if exist build rmdir /s /q build
 
 echo.
 echo ============================================
-echo  Gotovo: dist\%NAME%.zip
+echo  Gotovo: dist\%NAME%\ - eto gotovaya papka.
+echo  ZIP delaesh sam: PKM po papke - Otpravit.
 echo ============================================
 pause

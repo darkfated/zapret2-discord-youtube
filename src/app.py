@@ -1,138 +1,233 @@
+import functools
+import sys
 import tkinter as tk
-from tkinter import ttk, messagebox
+import webbrowser
+import winreg
+from tkinter import messagebox
+
+import customtkinter as ctk
 
 from .config import Settings
 from .strategy_builder import get_all_strategies, build_command
 from .process_manager import get_process_manager
 
+BG = "#1e1e2e"
+PANEL = "#181825"
+CARD = "#313244"
+HOVER = "#45475a"
+TEXT = "#cdd6f4"
+MUTED = "#a6adc8"
+ACCENT = "#89b4fa"
+GREEN = "#a6e3a1"
+RED = "#f38ba8"
+WARN = "#f9e2af"
 
-class App(tk.Tk):
+RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+RUN_VALUE = "zapret2-discord-youtube"
+GITHUB_URL = "https://github.com/darkfated/zapret2-discord-youtube"
+
+
+def is_autostart_enabled():
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
+            value, _ = winreg.QueryValueEx(key, RUN_VALUE)
+        return value.strip('"') == sys.executable
+    except (FileNotFoundError, OSError):
+        return False
+
+
+def set_autostart(enabled):
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
+        if enabled:
+            winreg.SetValueEx(key, RUN_VALUE, 0, winreg.REG_SZ, f'"{sys.executable}"')
+        else:
+            try:
+                winreg.DeleteValue(key, RUN_VALUE)
+            except FileNotFoundError:
+                pass
+
+
+class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("zapret2-discord-youtube")
-        self.geometry("560x480")
+        self.geometry("760x520")
         self.resizable(False, False)
+
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("blue")
+        self.configure(fg_color=BG)
 
         self.settings = Settings()
         self.pm = get_process_manager()
         self.strategies = get_all_strategies()
 
-        self._apply_theme()
+        self._name_to_key = {}
+        self._row_widgets = {}
+        self._selected_key = None
+
         self._build_ui()
+        if self._name_to_key:
+            self._on_pick(next(iter(self.strategies)))
         self._refresh_status()
+
+        self._poll_status()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
-    def _apply_theme(self):
-        self.configure(bg="#1e1e2e")
-        style = ttk.Style()
-        style.theme_use("clam")
-        style.configure(".", background="#1e1e2e", foreground="#cdd6f4", font=("Segoe UI", 11))
-        style.configure("TFrame", background="#1e1e2e")
-        style.configure("TLabel", background="#1e1e2e", foreground="#cdd6f4")
-        style.configure("TButton", background="#313244", foreground="#cdd6f4", padding=(14, 8))
-        style.map("TButton", background=[("active", "#45475a")])
-        style.configure("Start.TButton", background="#a6e3a1", foreground="#1e1e2e", font=("Segoe UI", 13, "bold"), padding=(20, 12))
-        style.map("Start.TButton", background=[("active", "#94e2d5")])
-        style.configure("Stop.TButton", background="#f38ba8", foreground="#1e1e2e", font=("Segoe UI", 13, "bold"), padding=(20, 12))
-        style.map("Stop.TButton", background=[("active", "#eba0ac")])
-        style.configure("TCheckbutton", background="#1e1e2e", foreground="#cdd6f4", indicatorbackground="#313244", indicatorsize=18)
-        style.map("TCheckbutton", background=[("active", "#1e1e2e")], foreground=[("selected", "#a6e3a1")])
-        self.option_add("*TCombobox*Listbox.background", "#313244")
-        self.option_add("*TCombobox*Listbox.foreground", "#cdd6f4")
-        self.option_add("*TCombobox*Listbox.selectBackground", "#45475a")
-
     def _build_ui(self):
-        container = ttk.Frame(self)
-        container.pack(fill=tk.BOTH, expand=True, padx=24, pady=24)
+        sidebar = ctk.CTkFrame(self, width=210, fg_color=PANEL, corner_radius=0)
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
 
-        ttk.Label(container, text="zapret2-discord-youtube", font=("Segoe UI", 18, "bold"), foreground="#89b4fa").pack(pady=(0, 4))
-        ttk.Label(container, text="Выберите режим и нажмите Старт", font=("Segoe UI", 11)).pack(pady=(0, 20))
+        ctk.CTkLabel(
+            sidebar, text="Режим:", font=ctk.CTkFont("Segoe UI", 13, weight="bold"), text_color=ACCENT
+        ).pack(anchor=tk.W, padx=16, pady=(18, 10))
 
-        picker = ttk.Frame(container)
-        picker.pack(fill=tk.X, pady=(0, 8))
-        ttk.Label(picker, text="Режим:", font=("Segoe UI", 12)).pack(side=tk.LEFT)
+        list_frame = ctk.CTkScrollableFrame(sidebar, fg_color=PANEL, scrollbar_button_color=CARD, scrollbar_button_hover_color=HOVER)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=(8, 4), pady=(0, 14))
 
-        self.combo_var = tk.StringVar()
-        self.combo = ttk.Combobox(picker, textvariable=self.combo_var, state="readonly", width=38, font=("Segoe UI", 11))
-        self.combo.pack(side=tk.LEFT, padx=(10, 0))
-        self.combo.bind("<<ComboboxSelected>>", self._on_select)
+        for key, s in self.strategies.items():
+            name = s.get("name", key)
+            self._name_to_key[name] = key
+            row = ctk.CTkButton(
+                list_frame,
+                text=name,
+                font=ctk.CTkFont("Segoe UI", 12),
+                anchor="w",
+                height=34,
+                corner_radius=6,
+                fg_color="transparent",
+                hover_color=HOVER,
+                text_color=TEXT,
+                command=functools.partial(self._on_pick, key),
+            )
+            row.pack(fill=tk.X, pady=1)
+            self._row_widgets[key] = row
 
-        self._prepare_strategies()
+        main = ctk.CTkFrame(self, fg_color=BG, corner_radius=0)
+        main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=28, pady=24)
 
-        self.desc_var = tk.StringVar(value="")
-        self.desc_label = ttk.Label(container, textvariable=self.desc_var, wraplength=480, justify=tk.LEFT, foreground="#a6adc8", font=("Segoe UI", 10))
-        self.desc_label.pack(fill=tk.X, pady=(4, 14))
-        self._show_desc(self.combo_var.get())
+        ctk.CTkLabel(
+            main, text="zapret2-discord-youtube",
+            font=ctk.CTkFont("Segoe UI", 18, weight="bold"), text_color=ACCENT,
+        ).pack(anchor=tk.W)
+        ctk.CTkLabel(
+            main, text="Выберите режим и нажмите Старт",
+            font=ctk.CTkFont("Segoe UI", 11), text_color=MUTED,
+        ).pack(anchor=tk.W, pady=(2, 18))
 
-        self.auto_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(container, text="Запуск при старте Windows", variable=self.auto_var).pack(anchor=tk.W, pady=(0, 16))
+        self.desc_label = ctk.CTkLabel(
+            main, text="", wraplength=440, justify=tk.LEFT,
+            font=ctk.CTkFont("Segoe UI", 11), text_color=MUTED,
+        )
+        self.desc_label.pack(anchor=tk.W, fill=tk.X, pady=(0, 16))
 
-        btns = ttk.Frame(container)
+        self.auto_var = tk.BooleanVar(value=is_autostart_enabled())
+        self.auto_check = ctk.CTkCheckBox(
+            main, text="Запуск при старте Windows", variable=self.auto_var,
+            font=ctk.CTkFont("Segoe UI", 12), fg_color=ACCENT, hover_color=ACCENT,
+            checkbox_width=20, checkbox_height=20, command=self._on_toggle_autostart,
+        )
+        self.auto_check.pack(anchor=tk.W, pady=(0, 16))
+
+        btns = ctk.CTkFrame(main, fg_color="transparent")
         btns.pack(fill=tk.X, pady=(0, 14))
-        self.start_btn = ttk.Button(btns, text="Старт", style="Start.TButton", command=self._on_start)
+        self.start_btn = ctk.CTkButton(
+            btns, text="Старт", fg_color=GREEN, hover_color="#94e2d5", text_color="#1e1e2e",
+            font=ctk.CTkFont("Segoe UI", 13, weight="bold"), height=42, corner_radius=8,
+            command=self._on_start,
+        )
         self.start_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 6))
-        self.stop_btn = ttk.Button(btns, text="Стоп", style="Stop.TButton", command=self._on_stop)
+        self.stop_btn = ctk.CTkButton(
+            btns, text="Стоп", fg_color=RED, hover_color="#eba0ac", text_color="#1e1e2e",
+            font=ctk.CTkFont("Segoe UI", 13, weight="bold"), height=42, corner_radius=8,
+            command=self._on_stop,
+        )
         self.stop_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(6, 0))
 
-        self.status_var = tk.StringVar(value="Остановлен")
-        ttk.Label(container, textvariable=self.status_var, font=("Segoe UI", 12, "bold")).pack(pady=(0, 4))
-        self.log_var = tk.StringVar(value="")
-        ttk.Label(container, textvariable=self.log_var, foreground="#a6adc8", font=("Segoe UI", 10), wraplength=480, justify=tk.LEFT).pack(fill=tk.X)
+        self.status_label = ctk.CTkLabel(
+            main, text="", font=ctk.CTkFont("Segoe UI", 12, weight="bold"), text_color=TEXT,
+        )
+        self.status_label.pack(anchor=tk.W, pady=(0, 4))
 
-        ttk.Label(container, text="Точная настройка - в файлах config/", foreground="#6c7086", font=("Segoe UI", 9)).pack(side=tk.BOTTOM, pady=(20, 0))
+        footer = ctk.CTkFrame(main, fg_color="transparent")
+        footer.pack(side=tk.BOTTOM, fill=tk.X, pady=(20, 0))
+        ctk.CTkLabel(
+            footer, text="Точная настройка - в файлах config/",
+            font=ctk.CTkFont("Segoe UI", 11), text_color="#6c7086",
+        ).pack(side=tk.LEFT)
+        github_link = ctk.CTkLabel(
+            footer, text="darkfated/zapret2-discord-youtube",
+            font=ctk.CTkFont("Segoe UI", 11), text_color=ACCENT, cursor="hand2",
+        )
+        github_link.pack(side=tk.RIGHT)
+        github_link.bind("<Button-1>", lambda e: webbrowser.open(GITHUB_URL))
 
-    def _prepare_strategies(self):
-        self._name_to_key = {}
-        for k, s in self.strategies.items():
-            self._name_to_key[s.get("name", k)] = k
-        names = list(self._name_to_key.keys())
-        self.combo["values"] = names
-        if names:
-            self.combo_var.set(names[0])
+    def _display_name(self, key):
+        return self.strategies[key].get("name", key)
 
-    def _current_key(self):
-        return self._name_to_key.get(self.combo_var.get())
+    def _on_pick(self, key):
+        if self.pm.is_running and self.pm.current_strategy != self._display_name(key):
+            self.pm.stop()
+            self._start(key)
+        self._select(key)
 
-    def _show_desc(self, name):
-        key = self._name_to_key.get(name)
-        if not key:
-            return
-        s = self.strategies[key]
-        text = s.get("description", "")
-        color = "#a6adc8"
-        if s.get("warning"):
-            text = f"Внимание! {s['warning']}\n\n{text}"
-            color = "#f9e2af"
-        self.desc_var.set(text)
-        self.desc_label.configure(foreground=color)
+    def _select(self, key):
+        desc = self.strategies[key].get("description", "")
+        color = MUTED
+        if self.strategies[key].get("warning"):
+            desc = f"Внимание! {self.strategies[key]['warning']}\n\n{desc}"
+            color = WARN
+        self.desc_label.configure(text=desc, text_color=color)
+        self._selected_key = key
+        self._paint_rows()
+        self._refresh_status()
 
-    def _on_select(self, event):
-        self._show_desc(self.combo_var.get())
-
-    def _on_start(self):
-        key = self._current_key()
-        if not key or key not in self.strategies:
-            messagebox.showwarning("Внимание", "Сначала выберите режим")
-            return
+    def _start(self, key):
         try:
             cmd = build_command(key, self.strategies[key], self.settings)
         except Exception as e:
             messagebox.showerror("Ошибка", str(e))
             return
-        if self.pm.start(cmd, self.strategies[key].get("name", key)):
-            self.log_var.set("Обход включен, применяются правила")
-        else:
-            self.log_var.set("Не удалось запустить")
+        self.pm.start(cmd, self.strategies[key].get("name", key))
+        self._paint_rows()
         self._refresh_status()
+
+    def _on_start(self):
+        if not self._selected_key:
+            messagebox.showwarning("Внимание", "Сначала выберите режим")
+            return
+        self._start(self._selected_key)
 
     def _on_stop(self):
         if self.pm.is_running:
             self.pm.stop()
-            self.log_var.set("Обход выключен")
-        self._refresh_status()
+            self._paint_rows()
+            self._refresh_status()
+
+    def _on_toggle_autostart(self):
+        set_autostart(self.auto_var.get())
+
+    def _paint_rows(self):
+        running = self.pm.current_strategy
+        for key, row in self._row_widgets.items():
+            if running == self._display_name(key):
+                row.configure(fg_color=GREEN, text_color="#1e1e2e", hover_color=GREEN)
+            elif self._selected_key == key:
+                row.configure(fg_color=CARD, text_color=TEXT, hover_color=HOVER)
+            else:
+                row.configure(fg_color="transparent", text_color=TEXT, hover_color=HOVER)
 
     def _refresh_status(self):
-        self.status_var.set(self.pm.get_status_text())
+        self.status_label.configure(text=self.pm.get_status_text())
+
+    def _poll_status(self):
+        self._refresh_status()
+        running = self.pm.current_strategy
+        if running and self._name_to_key.get(running) != self._selected_key:
+            self._selected_key = self._name_to_key.get(running, self._selected_key)
+            self._paint_rows()
+        self.after(1000, self._poll_status)
 
     def _on_close(self):
         if self.pm.is_running:
