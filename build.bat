@@ -10,7 +10,7 @@ echo.
 
 where python >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERROR] Python ne nayden. Ustanovite Python 3.10+ s python.org
+    echo [ERROR] Python ne nayden. Install Python 3.10+ from python.org
     pause
     exit /b 1
 )
@@ -39,6 +39,9 @@ xcopy /e /i /y config "%APP%\config" >nul
 xcopy /e /i /y lists  "%APP%\lists"  >nul
 xcopy /e /i /y blobs  "%APP%\blobs"  >nul
 xcopy /e /i /y zapret2 "%APP%\zapret2" >nul
+xcopy /e /i /y zapret2 "%APP%\zapret2" >nul
+copy /Y "README.md" "%APP%\" >nul
+copy /Y "LICENSE" "%APP%\" >nul
 
 echo Ochistka...
 del /q "dist\%NAME%.exe"
@@ -48,7 +51,6 @@ if exist build rmdir /s /q build
 
 echo.
 echo ============================================
-echo  Gotovo: dist\%NAME%\ - eto gotovaya papka.
-echo  ZIP delaesh sam: PKM po papke - Otpravit.
+echo  Gotovo: dist\%NAME%\
 echo ============================================
 pause
