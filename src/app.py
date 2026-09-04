@@ -1,5 +1,6 @@
 import functools
 import sys
+import time
 import tkinter as tk
 import webbrowser
 import winreg
@@ -149,6 +150,10 @@ class App(ctk.CTk):
             main, text="", font=ctk.CTkFont("Segoe UI", 12, weight="bold"), text_color=TEXT,
         )
         self.status_label.pack(anchor=tk.W, pady=(0, 4))
+        self.info_label = ctk.CTkLabel(
+            main, text="", font=ctk.CTkFont("Segoe UI", 10), text_color=MUTED,
+        )
+        self.info_label.pack(anchor=tk.W, pady=(0, 4))
 
         footer = ctk.CTkFrame(main, fg_color="transparent")
         footer.pack(side=tk.BOTTOM, fill=tk.X, pady=(20, 0))
@@ -169,7 +174,9 @@ class App(ctk.CTk):
     def _on_pick(self, key):
         if self.pm.is_running and self.pm.current_strategy != self._display_name(key):
             self.pm.stop()
+            time.sleep(0.5)
             self._start(key)
+            self.info_label.configure(text=f"Переключён на {self._display_name(key)}. Работает")
         self._select(key)
 
     def _select(self, key):
@@ -197,11 +204,13 @@ class App(ctk.CTk):
         if not self._selected_key:
             messagebox.showwarning("Внимание", "Сначала выберите режим")
             return
+        self.info_label.configure(text="")
         self._start(self._selected_key)
 
     def _on_stop(self):
         if self.pm.is_running:
             self.pm.stop()
+            self.info_label.configure(text="")
             self._paint_rows()
             self._refresh_status()
 
@@ -219,7 +228,14 @@ class App(ctk.CTk):
                 row.configure(fg_color="transparent", text_color=TEXT, hover_color=HOVER)
 
     def _refresh_status(self):
+        running = self.pm.is_running
         self.status_label.configure(text=self.pm.get_status_text())
+        if running:
+            self.start_btn.configure(state="disabled", fg_color="#45475a", text_color="#7f849c")
+            self.stop_btn.configure(state="normal", fg_color=RED, hover_color="#eba0ac", text_color="#1e1e2e")
+        else:
+            self.start_btn.configure(state="normal", fg_color=GREEN, hover_color="#94e2d5", text_color="#1e1e2e")
+            self.stop_btn.configure(state="disabled", fg_color="#45475a", text_color="#7f849c")
 
     def _poll_status(self):
         self._refresh_status()
