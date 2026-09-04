@@ -1,0 +1,14 @@
+game_filter: tcp+udp
+ipset_mode: loaded
+auto_update_check: true
+dns_over_https: true
+language: ru
+wf_parts:
+  - windivert_part.discord_media.txt
+  - windivert_part.stun.txt
+  - windivert_part.wireguard.txt
+  - windivert_part.quic_initial_ietf.txt
+wf_tcp: "80,443,2053,2083,2087,2096,8443"
+wf_udp: "443,19294-19344,50000-50100"
+game_filter_tcp: "1024-65535"
+game_filter_udp: "1024-65535"

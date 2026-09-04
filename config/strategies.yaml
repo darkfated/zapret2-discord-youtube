@@ -1,0 +1,3000 @@
+strategies:
+  default:
+    name: Изумруд
+    category: multisplit
+    description: Базовый режим. Работает в большинстве случаев, хорошо подходит для
+      YouTube и Discord. Начните с него.
+    sections:
+    - name: QUIC общий
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: multisplit
+        pos: '1'
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: multisplit
+        pos: '1'
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: multisplit
+        pos: '1'
+        seqovl: 568
+        seqovl_pattern: tls_4pda
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: multisplit
+        pos: '1'
+        seqovl: 568
+        seqovl_pattern: tls_4pda
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: multisplit
+        pos: '1'
+        seqovl: 568
+        seqovl_pattern: tls_4pda
+        any_protocol: true
+        cutoff: n3
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 12
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  alt:
+    name: Кобальт
+    category: fake+split
+    description: Облегченный режим с подменой временных меток. Помогает, если Изумруд
+      не работает.
+    sections:
+    - name: QUIC общий
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fakedsplit
+        pos: 1
+        pattern: '0x00'
+        fooling: ts
+        repeats: 6
+        blob: tls_google
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: fakedsplit
+        pos: 1
+        pattern: '0x00'
+        fooling: ts
+        repeats: 6
+        blob: tls_google
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fakedsplit
+        pos: 1
+        pattern: '0x00'
+        fooling: ts
+        repeats: 6
+        blob_fakes_tls:
+        - stun
+        - tls_google
+        blob_fakes_http: tls_max
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fakedsplit
+        pos: 1
+        pattern: '0x00'
+        fooling: ts
+        repeats: 6
+        blob_fakes_tls:
+        - stun
+        - tls_google
+        blob_fakes_http: tls_max
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fakedsplit
+        pos: 1
+        pattern: '0x00'
+        fooling: ts
+        repeats: 6
+        any_protocol: true
+        cutoff: n4
+        blob_fakes_tls:
+        - stun
+        - tls_google
+        blob_fakes_http: tls_max
+        blob_fakes_unknown:
+        - stun
+        - tls_google
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 12
+        blob: game_active
+        any_protocol: true
+        cutoff: n3
+  alt2:
+    name: Хризолит
+    category: multisplit
+    description: Вариант Изумруда с другими параметрами. Пробуйте, если Изумруд не
+      подошел.
+    sections:
+    - name: QUIC общий
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: multisplit
+        pos: 2
+        seqovl: 652
+        seqovl_pattern: tls_google
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: multisplit
+        pos: 2
+        seqovl: 652
+        seqovl_pattern: tls_google
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: multisplit
+        pos: 2
+        seqovl: 652
+        seqovl_pattern: tls_google
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: multisplit
+        pos: 2
+        seqovl: 652
+        seqovl_pattern: tls_google
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: multisplit
+        pos: 2
+        seqovl: 652
+        seqovl_pattern: tls_google
+        any_protocol: true
+        cutoff: n3
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 12
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  alt3:
+    name: Алмаз
+    category: hostfakesplit
+    description: Подменяет название сайта в запросе на разрешенное. Часто обходит
+      строгих провайдеров.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: hostfakesplit
+        host: www.google.com
+        altorder: true
+        tls_mod: rnd,dupsid,sni=www.google.com
+        fooling: ts
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: hostfakesplit
+        host: www.google.com
+        altorder: true
+        tls_mod: rnd,dupsid,sni=www.google.com
+        fooling: ts
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: hostfakesplit
+        host: ya.ru
+        altorder: true
+        tls_mod: rnd,dupsid,sni=ya.ru
+        fooling: ts
+        blob_fakes_http: tls_max
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: hostfakesplit
+        host: ya.ru
+        altorder: true
+        tls_mod: rnd,dupsid,sni=ya.ru
+        fooling: ts
+        blob_fakes_http: tls_max
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: hostfakesplit
+        host: ya.ru
+        altorder: true
+        tls_mod: rnd,dupsid,sni=ya.ru
+        fooling: ts
+        any_protocol: true
+        cutoff: n4
+        blob_fakes_http: tls_max
+        blob_fakes_unknown: tls_max
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 10
+        blob: game_active
+        any_protocol: true
+        cutoff: n4
+  alt4:
+    name: Сапфир
+    category: fake+split
+    description: Комбинация фейковых пакетов и разделения. Универсальный режим для
+      разных сайтов.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 6
+        blob: tls_google
+        tcp_seq: -1000
+      - func: multisplit
+        pos: 1
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: fake
+        repeats: 6
+        blob: tls_google
+        tcp_seq: -1000
+      - func: multisplit
+        pos: 1
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - stun
+        - tls_google
+        blob_fakes_http: tls_max
+        tcp_seq: -1000
+      - func: multisplit
+        pos: 1
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - stun
+        - tls_google
+        blob_fakes_http: tls_max
+        tcp_seq: -1000
+      - func: multisplit
+        pos: 1
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - stun
+        - tls_google
+        blob_fakes_http: tls_max
+        tcp_seq: -1000
+        any_protocol: true
+        cutoff: n3
+        blob_fakes_unknown:
+        - stun
+        - tls_google
+      - func: multisplit
+        pos: 1
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 10
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  alt6:
+    name: Гранат
+    category: multisplit
+    description: Вариант Изумруда с единым оформлением пакетов. Для стабильных сетей.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+        any_protocol: true
+        cutoff: n3
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 12
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  alt7:
+    name: Оникс
+    category: multisplit
+    description: Разделение запросов с данными в специальной позиции. Для отдельных
+      провайдеров.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: multisplit
+        pos: 2,sniext+1
+        seqovl: 679
+        seqovl_pattern: tls_google
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: multisplit
+        pos: 2,sniext+1
+        seqovl: 679
+        seqovl_pattern: tls_google
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: multisplit
+        pos: 2,sniext+1
+        seqovl: 679
+        seqovl_pattern: tls_google
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: syndata
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: syndata
+        any_protocol: true
+        cutoff: n4
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 12
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  alt8:
+    name: Жемчуг
+    category: pure-fake
+    description: Только фейковые пакеты, без разделения. Мягкий режим для слабых обходов.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 6
+        tls_mod: none
+        tcp_seq: -2
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: fake
+        repeats: 6
+        tls_mod: none
+        tcp_seq: -2
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        tls_mod: none
+        tcp_seq: -2
+        blob_fakes_http: tls_max
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        tls_mod: none
+        tcp_seq: -2
+        blob_fakes_http: tls_max
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        tls_mod: none
+        tcp_seq: -2
+        any_protocol: true
+        cutoff: n3
+        blob_fakes_http: tls_max
+        blob_fakes_unknown: tls_max
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 12
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  simple_fake:
+    name: Гелиотроп
+    category: pure-fake
+    description: Простые фейковые пакеты. Мягкий и безопасный режим для слабых обходов.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 6
+        blob: tls_google
+        fooling: ts
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: hostfakesplit
+        host: www.google.com
+        fooling: ts
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: tls_google
+        fooling: ts
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: tls_google
+        fooling: ts
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - stun2
+        - tls_google
+        any_protocol: true
+        cutoff: n3
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 12
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  simple_fake_alt:
+    name: Перидот
+    category: pure-fake
+    description: Простые фейки со сдвигом данных. Слегка усиленный вариант Гелиотропа.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 6
+        blob: tls_google
+        tcp_seq: -2
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: fake
+        repeats: 6
+        blob: tls_google
+        tcp_seq: -2
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - tls_google
+        - stun2
+        - tls_max
+        tcp_seq: -2
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - tls_google
+        - stun2
+        - tls_max
+        tcp_seq: -2
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - tls_google
+        - stun2
+        - tls_max
+        tcp_seq: -2
+        any_protocol: true
+        cutoff: n3
+        blob_fakes_unknown:
+        - tls_google
+        - stun2
+        - tls_max
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 12
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  simple_fake_alt2:
+    name: Цитрин
+    category: pure-fake
+    description: Простые фейки с расширенным образцом. Усиленный безопасный режим.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 6
+        blob: tls_max
+        fooling: ts
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: fake
+        repeats: 6
+        blob: tls_google
+        fooling: ts
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - tls_max
+        - stun2
+        - tls_google
+        fooling: ts
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - tls_max
+        - stun2
+        - tls_google
+        fooling: ts
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - tls_max
+        - stun2
+        - tls_google
+        fooling: ts
+        any_protocol: true
+        cutoff: n5
+        blob_fakes_unknown:
+        - tls_max
+        - stun2
+        - tls_google
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 12
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  alt10:
+    name: Агат
+    category: pure-fake
+    description: Только фейковые пакеты с несколькими образцами. Для упорных провайдеров.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 6
+        blob: tls_google
+        tls_mod: none
+        fooling: ts
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: fake
+        repeats: 6
+        blob: tls_google
+        fooling: ts
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - stun
+        - tls_4pda
+        blob_fakes_http: tls_max
+        fooling: ts
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - stun
+        - tls_4pda
+        blob_fakes_http: tls_max
+        fooling: ts
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob_fakes_tls:
+        - stun
+        - tls_4pda
+        blob_fakes_http: tls_max
+        fooling: ts
+        any_protocol: true
+        cutoff: n3
+        blob_fakes_unknown:
+        - stun
+        - tls_4pda
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 12
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  alt11:
+    name: Рубин
+    category: fake+split
+    description: Комбинация фейков и разделения с усиленным трафиком QUIC. Для YouTube
+      и игр.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 8
+        blob: tls_google
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: fake
+        repeats: 8
+        blob: tls_google
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        blob_fakes_tls:
+        - stun2
+        - tls_max
+        blob_fakes_http: tls_max
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 664
+        seqovl_pattern: tls_max
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        blob_fakes_tls:
+        - stun2
+        - tls_max
+        blob_fakes_http: tls_max
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 664
+        seqovl_pattern: tls_max
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        blob_fakes_tls:
+        - stun2
+        - tls_max
+        blob_fakes_http: tls_max
+        fooling: ts
+        any_protocol: true
+        cutoff: n4
+        blob_fakes_unknown:
+        - stun2
+        - tls_max
+      - func: multisplit
+        pos: 1
+        seqovl: 664
+        seqovl_pattern: tls_max
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 10
+        blob: game_active
+        any_protocol: true
+        cutoff: n4
+  alt12:
+    name: Янтарь
+    category: fake+split
+    description: Смешанные техники для разных сайтов. Универсальный режим под многие
+      сети.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob_fakes:
+        - stun
+        - discord_active
+        repeats: 3
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 8
+        blob: tls_google
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: hostfakesplit
+        host: www.google.com
+        fooling: ts
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        blob_fakes_tls:
+        - stun
+        - tls_max
+        blob_fakes_http: tls_max
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 664
+        seqovl_pattern: tls_max
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        blob_fakes_tls:
+        - stun
+        - tls_max
+        blob_fakes_http: tls_max
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 664
+        seqovl_pattern: tls_max
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        blob_fakes_tls:
+        - stun
+        - tls_max
+        blob_fakes_http: tls_max
+        fooling: ts
+        any_protocol: true
+        cutoff: n4
+        blob_fakes_unknown:
+        - stun
+        - tls_max
+      - func: multisplit
+        pos: 1
+        seqovl: 664
+        seqovl_pattern: tls_max
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 10
+        blob: game_active
+        any_protocol: true
+        cutoff: n4
+  alt13:
+    name: Нефрит
+    category: hostfakesplit
+    description: Подмена названия сайта с усиленным оформлением. Для особо строгих
+      провайдеров.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 5
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 7
+        blob: tls_google
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+      desync:
+      - func: hostfakesplit
+        host: www.google.com
+        fooling: ts
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: hostfakesplit
+        host: mail.ru
+        altorder: true
+        fooling: ts
+        repeats: 5
+        blob_fakes_tls:
+        - sochi_park
+        - stun2
+        blob_fakes_http: sochi_park
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: hostfakesplit
+        host: mail.ru
+        altorder: true
+        fooling: ts
+        repeats: 5
+        blob_fakes_tls:
+        - sochi_park
+        - stun2
+        blob_fakes_http: sochi_park
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: hostfakesplit
+        host: mail.ru
+        altorder: true
+        fooling: ts
+        repeats: 5
+        any_protocol: true
+        cutoff: n4
+        blob_fakes_tls:
+        - sochi_park
+        - stun2
+        blob_fakes_http: sochi_park
+        blob_fakes_unknown:
+        - sochi_park
+        - stun2
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 10
+        blob: game_active
+        any_protocol: true
+        cutoff: n4
+  fake_tls_auto:
+    name: Аметист
+    category: fake+split
+    description: Автоматический фейк TLS с перемешиванием пакетов. Высокая устойчивость.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 11
+        tcp_seq: -10000000
+        tls_mod: rnd,dupsid,sni=www.google.com
+      - func: multidisorder
+        pos: 1,midsld
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: fake
+        repeats: 11
+        tcp_seq: -10000000
+        tls_mod: rnd,dupsid,sni=www.google.com
+      - func: multidisorder
+        pos: 1,midsld
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        tcp_seq: -10000000
+        tls_mod: rnd,dupsid,sni=www.google.com
+        blob_fakes_http: tls_max
+      - func: multidisorder
+        pos: 1,midsld
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        tcp_seq: -10000000
+        tls_mod: rnd,dupsid,sni=www.google.com
+        blob_fakes_http: tls_max
+      - func: multidisorder
+        pos: 1,midsld
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        tcp_seq: -10000000
+        tls_mod: rnd,dupsid,sni=www.google.com
+        any_protocol: true
+        cutoff: n4
+        blob_fakes_http: tls_max
+        blob_fakes_unknown: tls_max
+      - func: multidisorder
+        pos: 1,midsld
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 10
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  fake_tls_auto_alt:
+    name: Циркон
+    category: fake+split
+    description: Автоматический TLS и облегченное разделение. Средний уровень воздействия.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        tcp_seq: -2
+      - func: fakedsplit
+        pos: 1
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        tcp_seq: -2
+      - func: fakedsplit
+        pos: 1
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        tcp_seq: -2
+        blob_fakes_http: tls_max
+      - func: fakedsplit
+        pos: 1
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        tcp_seq: -2
+        blob_fakes_http: tls_max
+      - func: fakedsplit
+        pos: 1
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        tcp_seq: -2
+        any_protocol: true
+        cutoff: n3
+        blob_fakes_http: tls_max
+        blob_fakes_unknown: tls_max
+      - func: fakedsplit
+        pos: 1
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 10
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  fake_tls_auto_alt2:
+    name: Лазурит
+    category: fake+split
+    description: Автоматический TLS и разделение с сильным сдвигом данных. Для упорных
+      блокировок.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        tcp_seq: -10000000
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        tcp_seq: -10000000
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        tcp_seq: -10000000
+        blob_fakes_http: tls_max
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        tcp_seq: -10000000
+        blob_fakes_http: tls_max
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        tcp_seq: -10000000
+        any_protocol: true
+        cutoff: n3
+        blob_fakes_http: tls_max
+        blob_fakes_unknown: tls_max
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 10
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  fake_tls_auto_alt3:
+    name: Кварц
+    category: fake+split
+    description: Автоматический TLS и разделение с подменой времени. Мягкое воздействие.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        fooling: ts
+        blob_fakes_http: tls_max
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        fooling: ts
+        blob_fakes_http: tls_max
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        tls_mod: rnd,dupsid,sni=www.google.com
+        fooling: ts
+        any_protocol: true
+        cutoff: n4
+        blob_fakes_http: tls_max
+        blob_fakes_unknown: tls_max
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 10
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  alt9:
+    name: Топаз
+    category: hostfakesplit
+    description: Подмена названия сайта на разрешенное. Двойная защита временных меток.
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: hostfakesplit
+        host: www.google.com
+        fooling: ts
+        repeats: 4
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: hostfakesplit
+        host: www.google.com
+        fooling: ts
+        repeats: 4
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: hostfakesplit
+        host: ozon.ru
+        fooling: ts,md5sig
+        repeats: 4
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: hostfakesplit
+        host: ozon.ru
+        fooling: ts
+        repeats: 4
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: hostfakesplit
+        host: ozon.ru
+        fooling: ts
+        repeats: 4
+        any_protocol: true
+        cutoff: n3
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 12
+        blob: game_active
+        any_protocol: true
+        cutoff: n2
+  alt5:
+    name: Уголь
+    category: experimental
+    description: Максимально агрессивный режим на весь трафик. Может нарушить работу
+      других сервисов.
+    warning: Применяется ко всему интернет-трафику, возможны сбои
+    sections:
+    - name: QUIC General
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Discord голос
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+      desync:
+      - func: fake
+        blob: discord_active
+        repeats: 6
+    - name: Весь IPv4 TCP
+      filter:
+        l3: ipv4
+        tcp: 80,443,2053,2083,2087,2096,8443
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: syndata
+      - func: multidisorder
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: syndata
+      - func: multidisorder
+        any_protocol: true
+        cutoff: n4
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 6
+        blob: quic_google
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 14
+        blob: game_active
+        any_protocol: true
+        cutoff: n3
+  exp:
+    name: Метеорит
+    category: experimental
+    description: Экспериментальный режим с агрессивными техниками. Только если ничего
+      другое не помогло.
+    warning: Экспериментальный, может не работать у вашего провайдера
+    sections:
+    - name: QUIC общий (L7)
+      filter:
+        udp: 443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+        l7_filter: quic
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: Discord голос (неизв.)
+      filter:
+        udp: 19294-19344,50000-50100
+        l7:
+        - discord
+        - stun
+        - unknown
+      desync:
+      - func: fake
+        blob_fakes:
+        - quic_google
+        - discord_active
+        repeats: 4
+        any_protocol: true
+        cutoff: n4
+    - name: Discord медиа
+      filter:
+        tcp: 2053,2083,2087,2096,8443
+        hostlist_domains:
+        - discord.media
+      desync:
+      - func: fake
+        repeats: 8
+        blob: tls_google
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 681
+        seqovl_pattern: tls_google
+    - name: Google/YouTube
+      filter:
+        tcp: 443
+        hostlist:
+        - google
+        ip_id: zero
+      desync:
+      - func: hostfakesplit
+        host: www.google.com
+        fooling: ts
+    - name: Общий HTTPS
+      filter:
+        tcp: 80,443
+        hostlist:
+        - general
+        - general-user
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 4
+        blob: stun2
+        blob_fakes_http: tls_max
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 480
+        seqovl_pattern: stun2
+    - name: IPSet QUIC
+      filter:
+        udp: 443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 11
+        blob: quic_google
+    - name: IPSet HTTPS
+      filter:
+        tcp: 80,443,8443
+        ipset: all
+        hostlist_exclude:
+        - exclude
+        - exclude-user
+        ipset_exclude:
+        - exclude
+        - exclude-user
+        hostlist_exclude_domains:
+        - fonts.googleapis.com
+      desync:
+      - func: fake
+        repeats: 4
+        blob: stun2
+        blob_fakes_http: tls_max
+        fooling: ts
+      - func: multisplit
+        pos: 1
+        seqovl: 480
+        seqovl_pattern: stun2
+    - name: Игры TCP
+      filter:
+        tcp: '%GameFilterTCP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 8
+        blob_fakes_tls:
+        - stun2
+        - tls_max
+        blob_fakes_http: tls_max
+        fooling: ts
+        any_protocol: true
+        cutoff: n4
+        blob_fakes_unknown:
+        - stun2
+        - tls_max
+      - func: multisplit
+        pos: 1
+        seqovl: 664
+        seqovl_pattern: tls_max
+    - name: Игры UDP
+      filter:
+        udp: '%GameFilterUDP%'
+        ipset: all
+        ipset_exclude:
+        - exclude
+        - exclude-user
+      desync:
+      - func: fake
+        repeats: 5
+        blob_fakes:
+        - quic_4pda
+        - game_active
+        any_protocol: true
+        cutoff: n4
