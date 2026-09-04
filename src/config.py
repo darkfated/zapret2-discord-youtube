@@ -1,8 +1,16 @@
 import os
+import sys
 import yaml
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+
+def _runtime_dir():
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent.parent
+
+
+BASE_DIR = _runtime_dir()
 CONFIG_DIR = BASE_DIR / "config"
 LISTS_DIR = BASE_DIR / "lists"
 BLOBS_DIR = BASE_DIR / "blobs"
