@@ -20,15 +20,15 @@ class ProcessManager:
         if self.is_running:
             self.stop()
 
-        cmd_str = " ".join(f'"{c}"' if " " in c else c for c in cmd)
+        cmdline = subprocess.list2cmdline(cmd)
 
         si = subprocess.STARTUPINFO()
         si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         si.wShowWindow = 0
 
         self._process = subprocess.Popen(
-            cmd_str,
-            shell=True,
+            cmdline,
+            shell=False,
             startupinfo=si,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

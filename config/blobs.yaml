@@ -9,6 +9,7 @@ blobs:
   tls_4pda: tls_clienthello_4pda_to.bin
   tls_max: tls_clienthello_max_ru.bin
   tls_sochi_park: tls_clienthello_sochi_park.bin
+  sochi_park: tls_clienthello_sochi_park.bin
   tls_5ka: tls_clienthello_5ka_ru.bin
   stun: stun.bin
   stun2: stun2.bin

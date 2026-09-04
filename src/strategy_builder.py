@@ -1,5 +1,5 @@
 import os
-from .config import BlobMap, LISTS_DIR, ZAPRET_DIR
+from .config import BlobMap, BLOBS_DIR, LISTS_DIR, ZAPRET_DIR
 
 blob_map = BlobMap()
 
@@ -26,6 +26,42 @@ def _resolve_ipset(name):
     fname = mapping.get(name, name)
     p = LISTS_DIR / fname
     return str(p) if p.exists() else str(LISTS_DIR / fname)
+
+
+def _blob_fullfile(name):
+    name = str(name)
+    if name.startswith("0x"):
+        return None
+    fname = blob_map.resolve(name)
+    p = BLOBS_DIR / fname
+    return str(p) if p.exists() else None
+
+
+def _collect_blob_names(sections):
+    names = set()
+    for sec in sections:
+        for de in sec.get("desync", []):
+            if not isinstance(de, dict):
+                continue
+            v = de.get("blob")
+            if v:
+                names.add(v)
+            for key in ("blob_fakes", "blob_fakes_tls", "blob_fakes_unknown"):
+                val = de.get(key)
+                if isinstance(val, list):
+                    names.update(val)
+                elif val:
+                    names.add(val)
+            val = de.get("blob_fakes_http")
+            if isinstance(val, list):
+                names.update(val)
+            elif val:
+                names.add(val)
+            for key in ("seqovl_pattern", "pattern"):
+                val = de.get(key)
+                if val and not str(val).startswith("0x"):
+                    names.add(val)
+    return names
 
 
 def _build_filter_args(filt, settings):
@@ -59,8 +95,7 @@ def _build_filter_args(filt, settings):
 
     if "hostlist" in filt:
         for h in filt["hostlist"]:
-            path = _resolve_list(h)
-            args.append(f'--hostlist="{path}"')
+            args.append(f"--hostlist={_resolve_list(h)}")
 
     if "hostlist_domains" in filt:
         domains = ",".join(filt["hostlist_domains"])
@@ -68,24 +103,18 @@ def _build_filter_args(filt, settings):
 
     if "hostlist_exclude" in filt:
         for h in filt["hostlist_exclude"]:
-            path = _resolve_list(h)
-            args.append(f'--hostlist-exclude="{path}"')
+            args.append(f"--hostlist-exclude={_resolve_list(h)}")
 
     if "hostlist_exclude_domains" in filt:
         domains = ",".join(filt["hostlist_exclude_domains"])
         args.append(f"--hostlist-exclude-domains={domains}")
 
     if "ipset" in filt:
-        path = _resolve_ipset(filt["ipset"])
-        args.append(f'--ipset="{path}"')
+        args.append(f"--ipset={_resolve_ipset(filt['ipset'])}")
 
     if "ipset_exclude" in filt:
         for ie in filt["ipset_exclude"]:
-            path = _resolve_ipset(ie)
-            args.append(f'--ipset-exclude="{path}"')
-
-    if "ip_id" in filt:
-        args.append(f"--ip-id={filt['ip_id']}")
+            args.append(f"--ipset-exclude={_resolve_ipset(ie)}")
 
     return args
 
@@ -117,7 +146,7 @@ def _add_fooling_params(params, d):
         params.append("tcp_md5")
 
 
-def _add_common_params(params, d):
+def _add_common_params(params, d, extra):
     if "repeats" in d:
         params.append(f"repeats={d['repeats']}")
 
@@ -132,17 +161,20 @@ def _add_common_params(params, d):
         elif isinstance(cutoff, str) and cutoff.startswith("d"):
             params.append(f"out_range=-{cutoff}")
 
+    if extra:
+        params.extend(extra)
+
     _add_fooling_params(params, d)
 
 
-def _build_one_desync(d):
+def _build_one_desync(d, extra):
     func = d["func"]
     params = []
 
-    _add_common_params(params, d)
+    _add_common_params(params, d, extra)
 
     if "blob" in d:
-        params.append(f"blob={blob_map.path(d['blob'])}")
+        params.append(f"blob={d['blob']}")
 
     if "pos" in d:
         params.append(f"pos={d['pos']}")
@@ -151,7 +183,7 @@ def _build_one_desync(d):
         params.append(f"seqovl={d['seqovl']}")
 
     if "seqovl_pattern" in d:
-        params.append(f"seqovl_pattern={blob_map.path(d['seqovl_pattern'])}")
+        params.append(f"seqovl_pattern={d['seqovl_pattern']}")
 
     if "pattern" in d:
         params.append(f"pattern={d['pattern']}")
@@ -165,6 +197,9 @@ def _build_one_desync(d):
     if "tls_mod" in d:
         params.append(f"tls_mod={d['tls_mod']}")
 
+    if "dir" in d:
+        params.append(f"dir={d['dir']}")
+
     param_str = ":".join(params)
     if param_str:
         return f"--lua-desync={func}:{param_str}"
@@ -172,7 +207,7 @@ def _build_one_desync(d):
         return f"--lua-desync={func}"
 
 
-def _build_desync_args(desync_list):
+def _build_desync_args(desync_list, extra):
     args = []
     for d in desync_list:
         func = d["func"]
@@ -198,7 +233,7 @@ def _build_desync_args(desync_list):
                     blob_lists.append(("blob", unknown))
 
             base_params = []
-            _add_common_params(base_params, d)
+            _add_common_params(base_params, d, extra)
 
             for key, blob_name in blob_lists:
                 entry = dict(d)
@@ -209,12 +244,12 @@ def _build_desync_args(desync_list):
                 entry.pop("blob_fakes_unknown", None)
 
                 fake_params = list(base_params)
-                fake_params.append(f"blob={blob_map.path(blob_name)}")
+                fake_params.append(f"blob={blob_name}")
 
                 param_str = ":".join(fake_params)
                 args.append(f"--lua-desync={func}:{param_str}")
         else:
-            args.append(_build_one_desync(d))
+            args.append(_build_one_desync(d, extra))
 
     return args
 
@@ -226,10 +261,16 @@ def _n_str_to_packets(n_str):
         return 3
 
 
+def _ipid_extra(filt):
+    ipid = filt.get("ip_id")
+    return [f"ip_id={ipid}"] if ipid else []
+
+
 def build_command(strategy_key, strategy_data, settings):
     exe = str(ZAPRET_DIR / "winws2.exe")
     lua_dir = str(ZAPRET_DIR / "lua")
 
+    sections = strategy_data["sections"]
     cmd = [exe]
 
     wf_tcp = settings.wf_tcp_full()
@@ -237,18 +278,24 @@ def build_command(strategy_key, strategy_data, settings):
     cmd.append(f"--wf-tcp-out={wf_tcp}")
     cmd.append(f"--wf-udp-out={wf_udp}")
 
-    cmd.append(f'--lua-init=@"{os.path.join(lua_dir, "zapret-lib.lua")}"')
-    cmd.append(f'--lua-init=@"{os.path.join(lua_dir, "zapret-antidpi.lua")}"')
+    cmd.append(f'--lua-init=@{os.path.join(lua_dir, "zapret-lib.lua")}')
+    cmd.append(f'--lua-init=@{os.path.join(lua_dir, "zapret-antidpi.lua")}')
+
+    for blob_name in sorted(_collect_blob_names(sections)):
+        fpath = _blob_fullfile(blob_name)
+        if fpath:
+            cmd.append(f"--blob={blob_name}:@{fpath}")
 
     for part in settings.get("wf_parts", []):
         part_path = str(ZAPRET_DIR / "windivert.filter" / part)
-        cmd.append(f'--wf-raw-part=@"{part_path}"')
+        cmd.append(f'--wf-raw-part=@{part_path}')
 
-    for i, section in enumerate(strategy_data["sections"]):
+    for i, section in enumerate(sections):
         if i > 0:
             cmd.append("--new")
-        cmd.extend(_build_filter_args(section["filter"], settings))
-        cmd.extend(_build_desync_args(section["desync"]))
+        filt = section["filter"]
+        cmd.extend(_build_filter_args(filt, settings))
+        cmd.extend(_build_desync_args(section["desync"], _ipid_extra(filt)))
 
     return cmd
 
