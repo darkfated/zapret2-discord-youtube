@@ -1,7 +1,11 @@
 import functools
+import json
+import re
 import sys
+import threading
 import time
 import tkinter as tk
+import urllib.request
 import webbrowser
 import winreg
 from tkinter import messagebox
@@ -11,6 +15,7 @@ import customtkinter as ctk
 from .config import Settings
 from .strategy_builder import get_all_strategies, build_command
 from .process_manager import get_process_manager
+from .version import VERSION
 
 BG = "#1e1e2e"
 PANEL = "#181825"
@@ -26,6 +31,15 @@ WARN = "#f9e2af"
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 RUN_VALUE = "zapret2-discord-youtube"
 GITHUB_URL = "https://github.com/darkfated/zapret2-discord-youtube"
+GITHUB_RELEASES_URL = GITHUB_URL + "/releases/latest"
+GITHUB_API_LATEST = "https://api.github.com/repos/darkfated/zapret2-discord-youtube/releases/latest"
+
+_VERSION_RE = re.compile(r"(\d+)\.(\d+)\.(\d+)")
+
+
+def parse_version(text):
+    match = _VERSION_RE.search(text or "")
+    return tuple(int(part) for part in match.groups()) if match else None
 
 
 def is_autostart_enabled():
@@ -72,7 +86,10 @@ class App(ctk.CTk):
             self._on_pick(next(iter(self.strategies)))
         self._refresh_status()
 
+        self._update_checked = False
+        self._latest_version = None
         self._poll_status()
+        self._check_updates()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _build_ui(self):
@@ -155,10 +172,17 @@ class App(ctk.CTk):
         )
         self.info_label.pack(anchor=tk.W, pady=(0, 4))
 
+        self.update_label = ctk.CTkLabel(
+            main, text="", font=ctk.CTkFont("Segoe UI", 10, weight="bold"),
+            text_color=GREEN, cursor="hand2", height=18,
+        )
+        self.update_label.pack(anchor=tk.W, pady=(0, 4))
+        self.update_label.bind("<Button-1>", lambda e: webbrowser.open(GITHUB_RELEASES_URL))
+
         footer = ctk.CTkFrame(main, fg_color="transparent")
         footer.pack(side=tk.BOTTOM, fill=tk.X, pady=(20, 0))
         ctk.CTkLabel(
-            footer, text="Точная настройка - в файлах config/",
+            footer, text=f"Полная настройка - в папке config •  v{VERSION}",
             font=ctk.CTkFont("Segoe UI", 11), text_color="#6c7086",
         ).pack(side=tk.LEFT)
         github_link = ctk.CTkLabel(
@@ -239,11 +263,42 @@ class App(ctk.CTk):
 
     def _poll_status(self):
         self._refresh_status()
+        if self._update_checked:
+            self._update_checked = False
+            self._apply_update_check()
         running = self.pm.current_strategy
         if running and self._name_to_key.get(running) != self._selected_key:
             self._selected_key = self._name_to_key.get(running, self._selected_key)
             self._paint_rows()
         self.after(1000, self._poll_status)
+
+    def _check_updates(self):
+        def _worker():
+            latest = None
+            try:
+                req = urllib.request.Request(
+                    GITHUB_API_LATEST, headers={"User-Agent": "zapret2-discord-youtube"}
+                )
+                with urllib.request.urlopen(req, timeout=8) as response:
+                    data = json.load(response)
+                version = parse_version(data.get("tag_name") or data.get("name"))
+                if version:
+                    latest = version
+            except Exception:
+                latest = None
+            self._latest_version = latest
+            self._update_checked = True
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _apply_update_check(self):
+        current = parse_version(VERSION)
+        latest = self._latest_version
+        if current and latest and latest > current:
+            text = "Доступна новая версия {0} - нажмите, чтобы скачать".format(
+                ".".join(str(part) for part in latest)
+            )
+            self.update_label.configure(text=text)
 
     def _on_close(self):
         if self.pm.is_running:
