@@ -62,29 +62,33 @@ class Settings:
         save_yaml(self._path, self._data)
 
     @property
+    def game_filter_mode(self):
+        return self._data.get("game_filter", "off")
+
+    @property
     def game_filter_tcp(self):
-        mode = self._data["game_filter"]
+        mode = self.game_filter_mode
         if mode in ("tcp+udp", "tcp"):
-            return self._data["game_filter_tcp"]
-        return ""
+            return self._data.get("game_filter_tcp", "12")
+        return "12"
 
     @property
     def game_filter_udp(self):
-        mode = self._data["game_filter"]
+        mode = self.game_filter_mode
         if mode in ("tcp+udp", "udp"):
-            return self._data["game_filter_udp"]
-        return ""
+            return self._data.get("game_filter_udp", "12")
+        return "12"
 
     def wf_tcp_full(self):
         parts = [self._data["wf_tcp"]]
-        gft = self.game_filter_tcp
-        if gft:
-            parts.append(gft)
+        mode = self.game_filter_mode
+        if mode in ("tcp+udp", "tcp") and self._data.get("game_filter_tcp"):
+            parts.append(self._data["game_filter_tcp"])
         return ",".join(parts)
 
     def wf_udp_full(self):
         parts = [self._data["wf_udp"]]
-        gfu = self.game_filter_udp
-        if gfu:
-            parts.append(gfu)
+        mode = self.game_filter_mode
+        if mode in ("tcp+udp", "udp") and self._data.get("game_filter_udp"):
+            parts.append(self._data["game_filter_udp"])
         return ",".join(parts)
