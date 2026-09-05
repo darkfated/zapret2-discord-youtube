@@ -38,17 +38,34 @@ class ProcessManager:
 
     def stop(self):
         if self._process and self.is_running:
-            try:
-                self._process.terminate()
-                try:
-                    self._process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    self._process.kill()
-                    self._process.wait(timeout=3)
-            except Exception:
-                pass
+            self._kill(self._process)
         self._process = None
         self._strategy_name = None
+
+    def _kill(self, proc):
+        try:
+            taskkill = subprocess.Popen(
+                ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            try:
+                taskkill.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                try:
+                    taskkill.kill()
+                except Exception:
+                    pass
+            try:
+                proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                try:
+                    proc.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    pass
+        except Exception:
+            pass
 
     def get_pid(self):
         if self.is_running and self._process:

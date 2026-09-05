@@ -11,10 +11,12 @@ import winreg
 from tkinter import messagebox
 
 import customtkinter as ctk
+import pystray
+from PIL import Image
 
 from .config import Settings
-from .strategy_builder import get_all_strategies, build_command
 from .process_manager import get_process_manager
+from .strategy_builder import build_command, get_all_strategies
 from .version import VERSION
 
 BG = "#1e1e2e"
@@ -32,7 +34,9 @@ RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 RUN_VALUE = "zapret2-discord-youtube"
 GITHUB_URL = "https://github.com/darkfated/zapret2-discord-youtube"
 GITHUB_RELEASES_URL = GITHUB_URL + "/releases/latest"
-GITHUB_API_LATEST = "https://api.github.com/repos/darkfated/zapret2-discord-youtube/releases/latest"
+GITHUB_API_LATEST = (
+    "https://api.github.com/repos/darkfated/zapret2-discord-youtube/releases/latest"
+)
 
 _VERSION_RE = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 
@@ -40,6 +44,15 @@ _VERSION_RE = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 def parse_version(text):
     match = _VERSION_RE.search(text or "")
     return tuple(int(part) for part in match.groups()) if match else None
+
+
+def notify(title, message):
+    try:
+        from plyer import notification
+
+        notification.notify(title=title, message=message, timeout=5)
+    except Exception:
+        pass
 
 
 def is_autostart_enabled():
@@ -60,6 +73,21 @@ def set_autostart(enabled):
                 winreg.DeleteValue(key, RUN_VALUE)
             except FileNotFoundError:
                 pass
+
+
+_icon_cache = None
+
+
+def _tray_icon_image():
+    global _icon_cache
+    if _icon_cache is not None:
+        return _icon_cache
+    try:
+        img = Image.new("RGBA", (64, 64), (137, 180, 250, 255))
+        _icon_cache = img
+    except Exception:
+        _icon_cache = None
+    return _icon_cache
 
 
 class App(ctk.CTk):
@@ -90,6 +118,11 @@ class App(ctk.CTk):
         self._latest_version = None
         self._poll_status()
         self._check_updates()
+
+        self._closing = False
+        self._tray = None
+        self._setup_tray()
+
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _build_ui(self):
@@ -98,10 +131,18 @@ class App(ctk.CTk):
         sidebar.pack_propagate(False)
 
         ctk.CTkLabel(
-            sidebar, text="Режим:", font=ctk.CTkFont("Segoe UI", 13, weight="bold"), text_color=ACCENT
+            sidebar,
+            text="Режим:",
+            font=ctk.CTkFont("Segoe UI", 13, weight="bold"),
+            text_color=ACCENT,
         ).pack(anchor=tk.W, padx=16, pady=(18, 10))
 
-        list_frame = ctk.CTkScrollableFrame(sidebar, fg_color=PANEL, scrollbar_button_color=CARD, scrollbar_button_hover_color=HOVER)
+        list_frame = ctk.CTkScrollableFrame(
+            sidebar,
+            fg_color=PANEL,
+            scrollbar_button_color=CARD,
+            scrollbar_button_hover_color=HOVER,
+        )
         list_frame.pack(fill=tk.BOTH, expand=True, padx=(8, 4), pady=(0, 14))
 
         for key, s in self.strategies.items():
@@ -126,71 +167,141 @@ class App(ctk.CTk):
         main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=28, pady=24)
 
         ctk.CTkLabel(
-            main, text="zapret2-discord-youtube",
-            font=ctk.CTkFont("Segoe UI", 18, weight="bold"), text_color=ACCENT,
+            main,
+            text="zapret2-discord-youtube",
+            font=ctk.CTkFont("Segoe UI", 18, weight="bold"),
+            text_color=ACCENT,
         ).pack(anchor=tk.W)
         ctk.CTkLabel(
-            main, text="Выберите режим и нажмите Старт",
-            font=ctk.CTkFont("Segoe UI", 11), text_color=MUTED,
+            main,
+            text="Выберите режим и нажмите Старт",
+            font=ctk.CTkFont("Segoe UI", 11),
+            text_color=MUTED,
         ).pack(anchor=tk.W, pady=(2, 18))
 
         self.desc_label = ctk.CTkLabel(
-            main, text="", wraplength=440, justify=tk.LEFT,
-            font=ctk.CTkFont("Segoe UI", 11), text_color=MUTED,
+            main,
+            text="",
+            wraplength=440,
+            justify=tk.LEFT,
+            font=ctk.CTkFont("Segoe UI", 11),
+            text_color=MUTED,
         )
         self.desc_label.pack(anchor=tk.W, fill=tk.X, pady=(0, 16))
 
         self.auto_var = tk.BooleanVar(value=is_autostart_enabled())
         self.auto_check = ctk.CTkCheckBox(
-            main, text="Запуск при старте Windows", variable=self.auto_var,
-            font=ctk.CTkFont("Segoe UI", 12), fg_color=ACCENT, hover_color=ACCENT,
-            checkbox_width=20, checkbox_height=20, command=self._on_toggle_autostart,
+            main,
+            text="Запуск при старте Windows",
+            variable=self.auto_var,
+            font=ctk.CTkFont("Segoe UI", 12),
+            fg_color=ACCENT,
+            hover_color=ACCENT,
+            checkbox_width=20,
+            checkbox_height=20,
+            command=self._on_toggle_autostart,
         )
         self.auto_check.pack(anchor=tk.W, pady=(0, 16))
 
         btns = ctk.CTkFrame(main, fg_color="transparent")
         btns.pack(fill=tk.X, pady=(0, 14))
         self.start_btn = ctk.CTkButton(
-            btns, text="Старт", fg_color=GREEN, hover_color="#94e2d5", text_color="#1e1e2e",
-            font=ctk.CTkFont("Segoe UI", 13, weight="bold"), height=42, corner_radius=8,
+            btns,
+            text="Старт",
+            fg_color=GREEN,
+            hover_color="#94e2d5",
+            text_color="#1e1e2e",
+            font=ctk.CTkFont("Segoe UI", 13, weight="bold"),
+            height=42,
+            corner_radius=8,
             command=self._on_start,
         )
         self.start_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 6))
         self.stop_btn = ctk.CTkButton(
-            btns, text="Стоп", fg_color=RED, hover_color="#eba0ac", text_color="#1e1e2e",
-            font=ctk.CTkFont("Segoe UI", 13, weight="bold"), height=42, corner_radius=8,
+            btns,
+            text="Стоп",
+            fg_color=RED,
+            hover_color="#eba0ac",
+            text_color="#1e1e2e",
+            font=ctk.CTkFont("Segoe UI", 13, weight="bold"),
+            height=42,
+            corner_radius=8,
             command=self._on_stop,
         )
         self.stop_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(6, 0))
 
         self.status_label = ctk.CTkLabel(
-            main, text="", font=ctk.CTkFont("Segoe UI", 12, weight="bold"), text_color=TEXT,
+            main,
+            text="",
+            font=ctk.CTkFont("Segoe UI", 12, weight="bold"),
+            text_color=TEXT,
         )
         self.status_label.pack(anchor=tk.W, pady=(0, 4))
         self.info_label = ctk.CTkLabel(
-            main, text="", font=ctk.CTkFont("Segoe UI", 10), text_color=MUTED,
+            main,
+            text="",
+            font=ctk.CTkFont("Segoe UI", 10),
+            text_color=MUTED,
         )
         self.info_label.pack(anchor=tk.W, pady=(0, 4))
 
         self.update_label = ctk.CTkLabel(
-            main, text="", font=ctk.CTkFont("Segoe UI", 10, weight="bold"),
-            text_color=GREEN, cursor="hand2", height=18,
+            main,
+            text="",
+            font=ctk.CTkFont("Segoe UI", 10, weight="bold"),
+            text_color=GREEN,
+            cursor="hand2",
+            height=18,
         )
         self.update_label.pack(anchor=tk.W, pady=(0, 4))
-        self.update_label.bind("<Button-1>", lambda e: webbrowser.open(GITHUB_RELEASES_URL))
+        self.update_label.bind(
+            "<Button-1>", lambda e: webbrowser.open(GITHUB_RELEASES_URL)
+        )
 
         footer = ctk.CTkFrame(main, fg_color="transparent")
         footer.pack(side=tk.BOTTOM, fill=tk.X, pady=(20, 0))
         ctk.CTkLabel(
-            footer, text=f"Полная настройка - в папке config •  v{VERSION}",
-            font=ctk.CTkFont("Segoe UI", 11), text_color="#6c7086",
+            footer,
+            text=f"Полная настройка - в папке config •  v{VERSION}",
+            font=ctk.CTkFont("Segoe UI", 11),
+            text_color="#6c7086",
         ).pack(side=tk.LEFT)
         github_link = ctk.CTkLabel(
-            footer, text="darkfated/zapret2-discord-youtube",
-            font=ctk.CTkFont("Segoe UI", 11), text_color=ACCENT, cursor="hand2",
+            footer,
+            text="darkfated/zapret2-discord-youtube",
+            font=ctk.CTkFont("Segoe UI", 11),
+            text_color=ACCENT,
+            cursor="hand2",
         )
         github_link.pack(side=tk.RIGHT)
         github_link.bind("<Button-1>", lambda e: webbrowser.open(GITHUB_URL))
+
+    def _setup_tray(self):
+        try:
+            menu = pystray.Menu(
+                pystray.MenuItem("Показать", self._tray_show),
+                pystray.MenuItem("Закрыть", self._tray_quit, default=True),
+            )
+            self._tray = pystray.Icon(
+                "zapret2-discord-youtube",
+                _tray_icon_image(),
+                "zapret2-discord-youtube",
+                menu,
+            )
+            threading.Thread(target=self._tray.run, daemon=True).start()
+        except Exception:
+            self._tray = None
+
+    def _tray_show(self, icon=None, item=None):
+        self.after(0, self._show_window)
+
+    def _show_window(self):
+        self.deiconify()
+        self.lift()
+        self.focus_force()
+
+    def _tray_quit(self, icon=None, item=None):
+        self.after(0, self._do_full_quit)
 
     def _display_name(self, key):
         return self.strategies[key].get("name", key)
@@ -200,7 +311,9 @@ class App(ctk.CTk):
             self.pm.stop()
             time.sleep(0.5)
             self._start(key)
-            self.info_label.configure(text=f"Переключён на {self._display_name(key)}. Работает")
+            self.info_label.configure(
+                text=f"Переключён на {self._display_name(key)}. Работает"
+            )
         self._select(key)
 
     def _select(self, key):
@@ -249,17 +362,33 @@ class App(ctk.CTk):
             elif self._selected_key == key:
                 row.configure(fg_color=CARD, text_color=TEXT, hover_color=HOVER)
             else:
-                row.configure(fg_color="transparent", text_color=TEXT, hover_color=HOVER)
+                row.configure(
+                    fg_color="transparent", text_color=TEXT, hover_color=HOVER
+                )
 
     def _refresh_status(self):
         running = self.pm.is_running
         self.status_label.configure(text=self.pm.get_status_text())
         if running:
-            self.start_btn.configure(state="disabled", fg_color="#45475a", text_color="#7f849c")
-            self.stop_btn.configure(state="normal", fg_color=RED, hover_color="#eba0ac", text_color="#1e1e2e")
+            self.start_btn.configure(
+                state="disabled", fg_color="#45475a", text_color="#7f849c"
+            )
+            self.stop_btn.configure(
+                state="normal",
+                fg_color=RED,
+                hover_color="#eba0ac",
+                text_color="#1e1e2e",
+            )
         else:
-            self.start_btn.configure(state="normal", fg_color=GREEN, hover_color="#94e2d5", text_color="#1e1e2e")
-            self.stop_btn.configure(state="disabled", fg_color="#45475a", text_color="#7f849c")
+            self.start_btn.configure(
+                state="normal",
+                fg_color=GREEN,
+                hover_color="#94e2d5",
+                text_color="#1e1e2e",
+            )
+            self.stop_btn.configure(
+                state="disabled", fg_color="#45475a", text_color="#7f849c"
+            )
 
     def _poll_status(self):
         self._refresh_status()
@@ -301,10 +430,32 @@ class App(ctk.CTk):
             self.update_label.configure(text=text)
 
     def _on_close(self):
+        if self._closing:
+            return
+        self.withdraw()
         if self.pm.is_running:
-            if messagebox.askyesno("Выход", "Обход работает. Остановить и выйти?"):
-                self.pm.stop()
+            notify(
+                "zapret2-discord-youtube",
+                "Программа свёрнута, но обход продолжает работать.",
+            )
+
+    def _do_full_quit(self):
+        if self._closing:
+            return
+        self._closing = True
+        was_running = self.pm.is_running
+        self.pm.stop()
+        if self._tray is not None:
+            try:
+                self._tray.stop()
+            except Exception:
+                pass
         self.destroy()
+        if was_running:
+            notify(
+                "zapret2-discord-youtube",
+                "Обход отключён, а программа закрыта.",
+            )
 
 
 def main():
