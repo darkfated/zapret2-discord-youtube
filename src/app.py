@@ -55,11 +55,18 @@ def notify(title, message):
         pass
 
 
+AUTOSTART_FLAG = "--hidden"
+
+
+def _autostart_command():
+    return f'"{sys.executable}" {AUTOSTART_FLAG}'
+
+
 def is_autostart_enabled():
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
             value, _ = winreg.QueryValueEx(key, RUN_VALUE)
-        return value.strip('"') == sys.executable
+        return value.strip() == _autostart_command()
     except (FileNotFoundError, OSError):
         return False
 
@@ -67,7 +74,7 @@ def is_autostart_enabled():
 def set_autostart(enabled):
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
         if enabled:
-            winreg.SetValueEx(key, RUN_VALUE, 0, winreg.REG_SZ, f'"{sys.executable}"')
+            winreg.SetValueEx(key, RUN_VALUE, 0, winreg.REG_SZ, _autostart_command())
         else:
             try:
                 winreg.DeleteValue(key, RUN_VALUE)
@@ -91,7 +98,7 @@ def _tray_icon_image():
 
 
 class App(ctk.CTk):
-    def __init__(self):
+    def __init__(self, hidden=False):
         super().__init__()
         self.title("zapret2-discord-youtube")
         self.geometry("760x520")
@@ -124,6 +131,9 @@ class App(ctk.CTk):
         self._setup_tray()
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+        if hidden:
+            self._run_hidden()
 
     def _build_ui(self):
         sidebar = ctk.CTkFrame(self, width=210, fg_color=PANEL, corner_radius=0)
@@ -333,6 +343,7 @@ class App(ctk.CTk):
         except Exception as e:
             messagebox.showerror("Ошибка", str(e))
             return
+        self.settings.set("last_strategy", key)
         self.pm.start(cmd, self.strategies[key].get("name", key))
         self._paint_rows()
         self._refresh_status()
@@ -429,6 +440,16 @@ class App(ctk.CTk):
             )
             self.update_label.configure(text=text)
 
+    def _run_hidden(self):
+        if self._tray is None:
+            return
+        self.withdraw()
+        last = self.settings.get("last_strategy")
+        if last and last in self.strategies:
+            self._start(last)
+        name = self.strategies[last].get("name", last) if last and last in self.strategies else "выключен"
+        notify("zapret2-discord-youtube", f"Программа запущена в трее. Обход активен: {name}")
+
     def _on_close(self):
         if self._closing:
             return
@@ -459,5 +480,5 @@ class App(ctk.CTk):
 
 
 def main():
-    app = App()
+    app = App(hidden=AUTOSTART_FLAG in sys.argv)
     app.mainloop()
