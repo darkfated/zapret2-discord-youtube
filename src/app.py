@@ -439,6 +439,7 @@ class App(ctk.CTk):
                 ".".join(str(part) for part in latest)
             )
             self.update_label.configure(text=text)
+            webbrowser.open(GITHUB_RELEASES_URL)
 
     def _run_hidden(self):
         if self._tray is None:
