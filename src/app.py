@@ -13,6 +13,7 @@ from tkinter import messagebox
 import customtkinter as ctk
 import pystray
 from PIL import Image
+from winotify import Notification, audio
 
 from .config import Settings
 from .process_manager import get_process_manager
@@ -48,11 +49,15 @@ def parse_version(text):
 
 def notify(title, message):
     try:
-        from plyer import notification
-
-        notification.notify(title=title, message=message, timeout=5)
-    except Exception:
-        pass
+        toast = Notification(
+            app_id="zapret2-discord-youtube",
+            title=title,
+            msg=message,
+            duration="short"
+        )
+        toast.show()
+    except Exception as e:
+        print(f"[Ошибка уведомления] {title}: {message} - {e}")
 
 
 AUTOSTART_FLAG = "--hidden"
@@ -455,11 +460,10 @@ class App(ctk.CTk):
         if self._closing:
             return
         self.withdraw()
-        if self.pm.is_running:
-            notify(
-                "zapret2-discord-youtube",
-                "Программа свёрнута, но обход продолжает работать.",
-            )
+        notify(
+            "zapret2-discord-youtube",
+            "Приложение свёрнуто в трей.",
+        )
 
     def _do_full_quit(self):
         if self._closing:
